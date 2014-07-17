@@ -23,41 +23,53 @@
 <% if status != 'DOWN' %>
 <h2>Message List</h2>
 
-<% num_msgs = qc.num_messages %>
+<%
+num_msgs = qc.num_messages
+
+states = if qc.name == 'relay'
+           %w{prep que run err}
+         else
+           %w{prep que run done err}
+         end
+
+
+%>
 
 <table id="queue-lists" cellspacing="0" cellpading="5">
   <thead>
     <tr>
-      <th class="prep"><h4>PREP</h4><%= num_msgs['prep'] %></th>
-      <th class="que"><h4>QUE</h4><%= num_msgs['que'] %></th>
-      <th class="run"><h4>RUN</h4><%= num_msgs['run'] %></th>
-      <% if qc.name != 'relay' %>
-        <th class="done"><h4>DONE</h4><%= num_msgs['done'] %></th>
-      <% end %>
-      <th class="err"><h4>ERR</h4><%= num_msgs['err'] %></th>
+      <%- states.each do |state| -%>
+      <th class="<%= state %>"><h4><%= state.upcase %></h4><%= num_msgs[state] %></th>
+      <%- end -%>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <!-- PREP -->
-      <td class="prep">
-<% msg_ids = qc.messages({'state' => 'prep', 'limit' => 50}) %>
-<% grouped = {} %>
-<% msg_ids.each do |msg_id| %>
-  <% next if msg_id.nil? %>
-  <% date, rest = msg_id.split('.', 2) %>
-  <% grouped[date] ||= [] %>
-  <% grouped[date] << rest %>
-<% end %>
-<% grouped.sort.reverse.each do |date, msgs| %>
-  <h5><%= date %></h5>
-  <ul>
-  <% msgs.sort.reverse.each do |msg| %>
-    <li><a href="<%= "#{url}q/#{qc.name}/#{date}.#{msg}" %>"><%= msg %></a></li>
-  <% end %>
-  </ul>
-<% end %>
+
+<%
+  states.each do |state|
+    msg_ids = qc.messages({'state' => state, 'limit' => 50}) || []
+    grouped = {}
+    msg_ids.each do |msg_id|
+      next if msg_id.nil?
+      date, rest = msg_id.split('.', 2)
+      grouped[date] ||= []
+      grouped[date] << rest
+    end
+-%>
+      <!-- <%= state.upcase %> -->
+      <td class="<%= state %>">
+<%  grouped.sort.reverse.each do |date, msgs| %>
+        <h5><%= date %></h5>
+        <ul>
+        <% msgs.sort.reverse.each do |msg| %>
+          <li><a href="<%= "#{url}q/#{qc.name}/#{date}.#{msg}" %>"><%= msg %></a></li>
+        <% end %>
+        </ul>
+<%  end %>
       </td>
+<% end %>
+
       <!-- QUE -->
       <td class="que">
 <% msgs_and_backoffs = qc.messages({'state' => 'que'}) %>
@@ -129,44 +141,7 @@
   </ul>
 <% end %>
       </td>
-      <% if qc.name != 'relay' %>
-      <!-- DONE -->
-      <td class="done">
-<% msgs = qc.messages({'state' => 'done', 'limit' => 50}) %>
-<% grouped = {} %>
-<% msgs.each do |msg| %>
-  <% date, rest = msg.split('.', 2) %>
-  <% grouped[date] ||= [] %>
-  <% grouped[date] << rest %>
-<% end %>
-<% grouped.sort.reverse.each do |date, msgs| %>
-  <h5><%= date %></h5>
-  <ul>
-  <% msgs.sort.reverse.each do |msg| %>
-    <li><a href="<%= "#{url}q/#{qc.name}/#{date}.#{msg}" %>"><%= msg %></a></li>
-  <% end %>
-  </ul>
-<% end %>
-      </td>
-    <% end %>
-      <!-- ERR -->
-      <td class="err">
-<% msgs = qc.messages({'state' => 'err'}) %>
-<% grouped = {} %>
-<% msgs.each do |msg| %>
-  <% date, rest = msg.split('.', 2) %>
-  <% grouped[date] ||= [] %>
-  <% grouped[date] << rest %>
-<% end %>
-<% grouped.sort.reverse.each do |date, msgs| %>
-  <h5><%= date %></h5>
-  <ul>
-  <% msgs.sort.reverse.each do |msg| %>
-    <li><a href="<%= "#{url}q/#{qc.name}/#{date}.#{msg}" %>"><%= msg %></a></li>
-  <% end %>
-  </ul>
-<% end %>
-      </td>
+
   </tbody>
 </table>
 
