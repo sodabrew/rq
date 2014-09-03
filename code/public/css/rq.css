@@ -180,6 +180,10 @@ form label.field_label {
   clear: left;
 }
 
+form .field_together {
+  display: inline-block;
+}
+
 form .field {
   margin: 0;
   padding: 0 0 1em 0;
