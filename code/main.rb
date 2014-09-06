@@ -216,18 +216,23 @@ module RQ
     end
 
     post '/q/:name/new_message' do
-      api_call = params.fetch('x_format', 'json')
-      if api_call == 'html'
-        prms = params['mesg'].clone
+      if request.media_type == 'application/json'
+        request.body.rewind
+        prms = JSON.parse request.body.read
       else
-        prms = JSON.parse(params['mesg'])
+        api_call = params.fetch('x_format', 'json')
+        if api_call == 'html'
+          prms = params['mesg'].clone
+        else
+          prms = JSON.parse(params['mesg'])
+        end
       end
 
       # Normalize some values
-      if prms.has_key? 'post_run_webhook' and prms['post_run_webhook'].is_a? String
-        # clean webhook input of any spaces
-        # Ruby split..... so good!
-        prms['post_run_webhook'] = prms['post_run_webhook'].split ' '
+      if prms.has_key? 'post_run_webhook' && prms['post_run_webhook'].is_a?(String)
+        # The client can send either a whitespace-separated list of hooks or use JSON
+        # to construct an array of hooks. The Queue class expects an array.
+        prms['post_run_webhook'] = prms['post_run_webhook'].split
       end
       if prms.has_key? 'count'
         prms['count'] = prms['count'].to_i
@@ -257,7 +262,8 @@ module RQ
         throw :halt, [503, "503 - Service Unavailable - Operationally Down"]
       end
 
-      if api_call == 'json'
+      if api_call == 'json' || request.accept?('application/json')
+        content_type :json
         result.to_json
       elsif params[:back]
         if result[0] == "ok"
