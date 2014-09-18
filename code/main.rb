@@ -212,6 +212,57 @@ module RQ
         throw :halt, [404, "404 - Queue not found"]
       end
 
+      msg_ids = qc.messages({'state' => 'prep', 'limit' => 50})
+      grouped = {}
+      msg_ids.each do |msg_id|
+        next if msg_id.nil?
+        date, rest = msg_id.split('.', 2)
+        grouped[date] ||= []
+        grouped[date] << rest
+      end
+
+      msgs_and_backoffs = qc.messages({'state' => 'que'})
+      grouped = {}
+      msgs_and_backoffs.each do |msg_and_backoff|
+        date, rest = msg_and_backoff[0].split('.', 2)
+        grouped[date] ||= []
+        grouped[date] << [ rest, msg_and_backoff[1] ]
+      end
+
+      msgs = qc.messages({'state' => 'run'})
+      grouped = {}
+      msgs.each do |msg|
+        m = msg[0]
+        next if m.nil?
+        date, rest = m.split('.', 2)
+        grouped[date] ||= []
+        grouped[date] << rest
+      end
+
+      msgs = qc.messages({'state' => 'done', 'limit' => 50})
+      grouped = {}
+      msgs.each do |msg|
+        date, rest = msg.split('.', 2)
+        grouped[date] ||= []
+        grouped[date] << rest
+      end
+
+      msgs = qc.messages({'state' => 'err'})
+      grouped = {}
+      msgs.each do |msg|
+        date, rest = msg.split('.', 2)
+        grouped[date] ||= []
+        grouped[date] << rest
+      end
+
+      msgs = qc.messages({'state' => 'relayed', 'limit' => 50})
+      grouped = {}
+      msgs.each do |msg|
+        date, rest = msg.split('.', 2)
+        grouped[date] ||= []
+        grouped[date] << rest
+      end
+
       ok, config = qc.config
       erb :queue, :locals => { :qc => qc, :config => config }
     end
