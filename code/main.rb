@@ -212,52 +212,27 @@ module RQ
         throw :halt, [404, "404 - Queue not found"]
       end
 
-      msg_ids = qc.messages({'state' => 'prep', 'limit' => 50})
-      grouped = {}
-      msg_ids.each do |msg_id|
-        next if msg_id.nil?
-        date, rest = msg_id.split('.', 2)
-        grouped[date] ||= []
-        grouped[date] << rest
-      end
+      # que: [ [ msg_id, due ], ... ]
+      # run: [ [ msg_id, status ], ... ]
+      # others: [ msg_id, ... ]
 
-      msgs_and_backoffs = qc.messages({'state' => 'que'})
-      grouped = {}
-      msgs_and_backoffs.each do |msg_and_backoff|
-        date, rest = msg_and_backoff[0].split('.', 2)
-        grouped[date] ||= []
-        grouped[date] << [ rest, msg_and_backoff[1] ]
-      end
-
+      msgs = qc.messages({'state' => 'que'})
       msgs = qc.messages({'state' => 'run'})
       grouped = {}
-      msgs.each do |msg|
-        m = msg[0]
-        next if m.nil?
-        date, rest = m.split('.', 2)
+      msgs.each do |msg_status|
+        next if msg_status[0].nil?
+        date, rest = msg_status[0].split('.', 2)
         grouped[date] ||= []
-        grouped[date] << rest
+        grouped[date] << [ rest, msg_status[1] ]
       end
 
+      msgs = qc.messages({'state' => 'prep', 'limit' => 50})
       msgs = qc.messages({'state' => 'done', 'limit' => 50})
-      grouped = {}
-      msgs.each do |msg|
-        date, rest = msg.split('.', 2)
-        grouped[date] ||= []
-        grouped[date] << rest
-      end
-
       msgs = qc.messages({'state' => 'err'})
-      grouped = {}
-      msgs.each do |msg|
-        date, rest = msg.split('.', 2)
-        grouped[date] ||= []
-        grouped[date] << rest
-      end
-
       msgs = qc.messages({'state' => 'relayed', 'limit' => 50})
       grouped = {}
       msgs.each do |msg|
+        next if msg.nil?
         date, rest = msg.split('.', 2)
         grouped[date] ||= []
         grouped[date] << rest
